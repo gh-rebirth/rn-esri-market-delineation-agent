@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info: {title: Market Delineation Tools API, version: 1.0.0}
+servers:
+  - url: https://REPLACE_WITH_API_ID.execute-api.REPLACE_REGION.amazonaws.com/REPLACE_STAGE
+paths:
+  /tools/market-profile:
+    post:
+      operationId: get_market_profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                market_id: {type: string}
+                city: {type: string}
+                state: {type: string}
+                radius_miles: {type: number, default: 5}
+      responses: {'200': {description: ok}}
+  /tools/market-compare:
+    post:
+      operationId: compare_markets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                market_ids: {type: array, items: {type: string}}
+                top_k: {type: integer, default: 3}
+      responses: {'200': {description: ok}}
