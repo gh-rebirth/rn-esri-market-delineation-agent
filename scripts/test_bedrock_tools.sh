@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BEDROCK_STACK_NAME="${APP_NAME}-${STAGE}-bedrock-tools"
 BASE_STACK_NAME="${APP_NAME}-${STAGE}"
-SEED_MARKET_IDS="${SEED_MARKET_IDS:-atlanta_ga,new_york_ny,dallas_tx,chicago_il}"
+SEED_MARKET_IDS="${SEED_MARKET_IDS:-los_angeles_ca,seattle_wa,boise_id,birmingham_al,miami_fl,baltimore_md,detroit_mi,denver_co,houston_tx,austin_tx,cleveland_oh,boston_ma,nashville_tn,las_vegas_nv,san_francisco_ca,portland_or,tulsa_ok,atlanta_ga,new_york_ny,dallas_tx,chicago_il}"
 
 echo "Running live ESRI pull validation..."
 bash "${SCRIPT_DIR}/test_live_pull.sh"
@@ -44,7 +44,30 @@ for MARKET_ID in "${MARKET_IDS[@]}"; do
     -d "{\"market_id\":\"${MARKET_ID}\",\"radius_miles\":1,\"include_geometry\":false,\"force_refresh\":true}" >/dev/null
 done
 
-curl -sS -X POST "${BEDROCK_API_BASE}/tools/market-profile" -H "content-type: application/json" -d '{"market_id":"atlanta_ga"}'
+MARKET_IDS_JSON=$(printf '%s\n' "${MARKET_IDS[@]}" | jq -R . | jq -s .)
+TOP_K=${TOP_K:-${#MARKET_IDS[@]}}
+
+PROFILE_MARKET=${PROFILE_MARKET:-${MARKET_IDS[0]}}
+PROFILE_RESP=$(curl -sS -f -X POST "${BEDROCK_API_BASE}/tools/market-profile" \
+  -H "content-type: application/json" \
+  -d "{\"market_id\":\"${PROFILE_MARKET}\"}")
+echo "${PROFILE_RESP}" | jq .
 echo
-curl -sS -X POST "${BEDROCK_API_BASE}/tools/market-compare" -H "content-type: application/json" -d '{"market_ids":["atlanta_ga","new_york_ny","dallas_tx","chicago_il"],"top_k":3}'
+
+COMPARE_PAYLOAD=$(jq -n --argjson ids "${MARKET_IDS_JSON}" --argjson top "${TOP_K}" '{market_ids:$ids, top_k:$top}')
+COMPARE_RESP=$(curl -sS -f -X POST "${BEDROCK_API_BASE}/tools/market-compare" \
+  -H "content-type: application/json" \
+  -d "${COMPARE_PAYLOAD}")
+echo "${COMPARE_RESP}" | jq .
+
+EXPECTED_COUNT=${#MARKET_IDS[@]}
+if [ "${TOP_K}" -lt "${EXPECTED_COUNT}" ]; then
+  EXPECTED_COUNT=${TOP_K}
+fi
+RANKED_COUNT=$(echo "${COMPARE_RESP}" | jq '.ranked | length')
+if [ "${RANKED_COUNT}" -lt "${EXPECTED_COUNT}" ]; then
+  echo "market-compare returned ${RANKED_COUNT} markets; expected at least ${EXPECTED_COUNT}"
+  exit 1
+fi
+
 echo

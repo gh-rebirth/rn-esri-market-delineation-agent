@@ -4,7 +4,7 @@ set -euo pipefail
 : "${AWS_REGION:=us-east-1}"
 : "${STAGE:=dev}"
 : "${APP_NAME:=esri-market-delineation}"
-: "${LIVE_MARKETS:=atlanta_ga,new_york_ny,dallas_tx,chicago_il}"
+: "${LIVE_MARKETS:=los_angeles_ca,seattle_wa,boise_id,birmingham_al,miami_fl,baltimore_md,detroit_mi,denver_co,houston_tx,austin_tx,cleveland_oh,boston_ma,nashville_tn,las_vegas_nv,san_francisco_ca,portland_or,tulsa_ok,atlanta_ga,new_york_ny,dallas_tx,chicago_il}"
 
 STACK_NAME="${APP_NAME}-${STAGE}"
 API_URL=$(aws cloudformation describe-stacks \
