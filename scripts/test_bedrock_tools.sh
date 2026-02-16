@@ -3,9 +3,13 @@ set -euo pipefail
 : "${AWS_REGION:=us-east-1}"
 : "${STAGE:=dev}"
 : "${APP_NAME:=esri-market-delineation}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BEDROCK_STACK_NAME="${APP_NAME}-${STAGE}-bedrock-tools"
 BASE_STACK_NAME="${APP_NAME}-${STAGE}"
 SEED_MARKET_IDS="${SEED_MARKET_IDS:-atlanta_ga,new_york_ny,dallas_tx,chicago_il}"
+
+echo "Running live ESRI pull validation..."
+bash "${SCRIPT_DIR}/test_live_pull.sh"
 
 BEDROCK_API_BASE=$(aws cloudformation describe-stacks \
   --region "$AWS_REGION" \
@@ -35,9 +39,9 @@ echo "Seeding markets: ${SEED_MARKET_IDS}"
 
 IFS=',' read -r -a MARKET_IDS <<< "${SEED_MARKET_IDS}"
 for MARKET_ID in "${MARKET_IDS[@]}"; do
-  curl -sS -X POST "${MARKET_API_BASE}/market" \
+  curl -sS -f -X POST "${MARKET_API_BASE}/market" \
     -H "content-type: application/json" \
-    -d "{\"market_id\":\"${MARKET_ID}\",\"radius_miles\":1,\"include_geometry\":false}" >/dev/null
+    -d "{\"market_id\":\"${MARKET_ID}\",\"radius_miles\":1,\"include_geometry\":false,\"force_refresh\":true}" >/dev/null
 done
 
 curl -sS -X POST "${BEDROCK_API_BASE}/tools/market-profile" -H "content-type: application/json" -d '{"market_id":"atlanta_ga"}'
